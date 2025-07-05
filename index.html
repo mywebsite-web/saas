@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>FlowMetrics — SaaS Analytics Dashboard UI</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #f4f6fa;
+            --bg-dark: #181a20;
+            --card: #fff;
+            --card-dark: #23272f;
+            --text: #22223b;
+            --text-dark: #f4f6fa;
+            --muted: #6b7280;
+            --muted-dark: #a1a1aa;
+            --border: #e5e7eb;
+            --border-dark: #2d2f36;
+            --shadow: 0 2px 8px rgba(0,0,0,0.04);
+            --radius: 1rem;
+            --transition: 0.2s cubic-bezier(.4,0,.2,1);
+        }
+        [data-theme="dark"] {
+            --bg: var(--bg-dark);
+            --card: var(--card-dark);
+            --text: var(--text-dark);
+            --muted: var(--muted-dark);
+            --border: var(--border-dark);
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: background var(--transition), color var(--transition);
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem 1rem 1rem;
+            position: fixed;
+            height: 100vh;
+            left: 0; top: 0;
+            z-index: 10;
+            transition: background var(--transition), border var(--transition);
+        }
+        .sidebar .logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            letter-spacing: -1px;
+            margin-bottom: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sidebar nav {
+            flex: 1;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar li {
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            transition: background var(--transition), color var(--transition);
+            position: relative;
+        }
+        .sidebar a.active, .sidebar a:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .sidebar a .fa {
+            font-size: 1.2rem;
+        }
+        .sidebar .logout {
+            margin-top: auto;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            transition: background var(--transition), color var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .sidebar .logout:hover {
+            background: #f87171;
+            color: #fff;
+        }
+        /* Main Layout */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            transition: background var(--transition);
+        }
+        /* Topbar */
+        .topbar {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 9;
+            transition: background var(--transition), border var(--transition);
+        }
+        .topbar .search {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .topbar input[type="search"] {
+            border: 1px solid var(--border);
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border var(--transition), background var(--transition);
+            color: var(--text);
+        }
+        .topbar .actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .topbar .theme-toggle {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--muted);
+            transition: color var(--transition);
+        }
+        .topbar .theme-toggle:hover {
+            color: var(--primary);
+        }
+        .topbar .notification {
+            position: relative;
+            font-size: 1.2rem;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color var(--transition);
+        }
+        .topbar .notification .badge {
+            position: absolute;
+            top: -6px; right: -6px;
+            background: #f87171;
+            color: #fff;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            font-weight: 600;
+        }
+        .topbar .profile {
+            position: relative;
+            cursor: pointer;
+        }
+        .topbar .avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+            transition: border var(--transition);
+        }
+        .topbar .dropdown {
+            display: none;
+            position: absolute;
+            right: 0; top: 48px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            min-width: 160px;
+            z-index: 100;
+            transition: background var(--transition), border var(--transition);
+        }
+        .topbar .dropdown.active {
+            display: block;
+        }
+        .topbar .dropdown a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            text-decoration: none;
+            transition: background var(--transition), color var(--transition);
+            border-radius: var(--radius);
+        }
+        .topbar .dropdown a:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        /* Dashboard */
+        .dashboard {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            background: var(--bg);
+            min-height: calc(100vh - 64px);
+            transition: background var(--transition);
+        }
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2rem;
+        }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            border: 1px solid var(--border);
+            transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+        }
+        .card .card-title {
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .card .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .card .card-trend {
+            font-size: 0.95rem;
+            color: #16a34a;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .card .card-trend.negative {
+            color: #ef4444;
+        }
+        /* Charts */
+        .dashboard-charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 2rem;
+        }
+        .chart-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .chart-card h3 {
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 500;
+            margin: 0 0 0.5rem 0;
+        }
+        .dashboard-panels {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+        .activity-log, .quick-actions {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 220px;
+        }
+        .activity-log h3, .quick-actions h3 {
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 500;
+            margin: 0 0 0.5rem 0;
+        }
+        .activity-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.97rem;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .activity-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .activity-list .fa {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+        .quick-actions .actions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .quick-actions button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition), box-shadow var(--transition);
+            box-shadow: 0 1px 4px rgba(99,102,241,0.08);
+        }
+        .quick-actions button:hover {
+            background: var(--primary-dark);
+        }
+        /* User Table Page */
+        .page {
+            padding: 2rem;
+            min-height: calc(100vh - 64px);
+            background: var(--bg);
+            transition: background var(--transition);
+        }
+        .user-table-container {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+            margin-bottom: 2rem;
+        }
+        .user-table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .user-table-header input[type="search"] {
+            border: 1px solid var(--border);
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            outline: none;
+            color: var(--text);
+            transition: border var(--transition), background var(--transition);
+        }
+        .user-table-header select {
+            border: 1px solid var(--border);
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            color: var(--text);
+            outline: none;
+            transition: border var(--transition), background var(--transition);
+        }
+        table.user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+            background: var(--card);
+            color: var(--text);
+            transition: background var(--transition), color var(--transition);
+        }
+        table.user-table th, table.user-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        table.user-table th {
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+            transition: color var(--transition);
+        }
+        table.user-table th.sortable:hover {
+            color: var(--primary);
+        }
+        table.user-table tr:last-child td {
+            border-bottom: none;
+        }
+        table.user-table td .avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+        table.user-table td .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+        table.user-table td .status.inactive {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        table.user-table td .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        table.user-table td .actions button {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            transition: background var(--transition), color var(--transition);
+        }
+        table.user-table td .actions button:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        .pagination button {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 0.5rem;
+            padding: 0.3rem 0.8rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background var(--transition), color var(--transition), border var(--transition);
+        }
+        .pagination button.active, .pagination button:hover {
+            background: var(--primary);
+            color: #fff;
+            border: 1px solid var(--primary-dark);
+        }
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .dashboard-charts {
+                grid-template-columns: 1fr;
+            }
+            .dashboard-panels {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 64px;
+                padding: 1rem 0.5rem;
+            }
+            .sidebar .logo span {
+                display: none;
+            }
+            .sidebar a span {
+                display: none;
+            }
+            .main {
+                margin-left: 64px;
+            }
+        }
+        @media (max-width: 700px) {
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            .dashboard-charts, .dashboard-panels {
+                grid-template-columns: 1fr;
+            }
+            .topbar {
+                padding: 0 1rem;
+            }
+            .dashboard, .page {
+                padding: 1rem;
+            }
+            .user-table-container {
+                padding: 1rem;
+            }
+        }
+        /* Transitions */
+        .card, .chart-card, .activity-log, .quick-actions, .user-table-container {
+            transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+        }
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .toast.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fa fa-chart-line"></i>
+            <span>FlowMetrics</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#" class="nav-link active" data-page="dashboard" title="Dashboard"><i class="fa fa-home"></i><span>Dashboard</span></a></li>
+                <li><a href="#" class="nav-link" data-page="analytics" title="Analytics"><i class="fa fa-chart-bar"></i><span>Analytics</span></a></li>
+                <li><a href="#" class="nav-link" data-page="users" title="Users"><i class="fa fa-users"></i><span>Users</span></a></li>
+                <li><a href="#" class="nav-link" data-page="settings" title="Settings"><i class="fa fa-cog"></i><span>Settings</span></a></li>
+            </ul>
+        </nav>
+        <div class="logout" title="Logout"><i class="fa fa-sign-out-alt"></i><span>Logout</span></div>
+    </aside>
+    <!-- Main Content -->
+    <div class="main">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search">
+                <input type="search" placeholder="Search..." id="global-search">
+            </div>
+            <div class="actions">
+                <div class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">
+                    <i class="fa fa-moon"></i>
+                </div>
+                <div class="notification" id="notification-bell" title="Notifications">
+                    <i class="fa fa-bell"></i>
+                    <span class="badge" id="notification-badge">3</span>
+                </div>
+                <div class="profile" id="profile-menu">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Avatar" class="avatar">
+                    <div class="dropdown" id="profile-dropdown">
+                        <a href="#">Profile</a>
+                        <a href="#">Settings</a>
+                        <a href="#" id="logout-link">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- Dashboard Page -->
+        <main class="dashboard page-content" id="dashboard-page">
+            <section class="dashboard-cards">
+                <div class="card">
+                    <span class="card-title">Total Users</span>
+                    <span class="card-value" id="total-users">2,340</span>
+                    <span class="card-trend"><i class="fa fa-arrow-up"></i> 3.2% this week</span>
+                </div>
+                <div class="card">
+                    <span class="card-title">Revenue</span>
+                    <span class="card-value" id="revenue">$12,800</span>
+                    <span class="card-trend"><i class="fa fa-arrow-up"></i> 1.8% this week</span>
+                </div>
+                <div class="card">
+                    <span class="card-title">Bounce Rate</span>
+                    <span class="card-value" id="bounce-rate">38.5%</span>
+                    <span class="card-trend negative"><i class="fa fa-arrow-down"></i> 0.7% this week</span>
+                </div>
+                <div class="card">
+                    <span class="card-title">Active Sessions</span>
+                    <span class="card-value" id="active-sessions">187</span>
+                    <span class="card-trend"><i class="fa fa-arrow-up"></i> 5.1% this week</span>
+                </div>
+            </section>
+            <section class="dashboard-charts">
+                <div class="chart-card">
+                    <h3>User Activity (Last 7 Days)</h3>
+                    <canvas id="lineChart" height="120"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Sales by Plan</h3>
+                    <canvas id="barChart" height="120"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Traffic Sources</h3>
+                    <canvas id="pieChart" height="120"></canvas>
+                </div>
+            </section>
+            <section class="dashboard-panels">
+                <div class="activity-log">
+                    <h3>Recent Activity</h3>
+                    <ul class="activity-list" id="activity-list">
+                        <li><i class="fa fa-user-plus"></i> John Doe signed up <span style="color:var(--muted);font-size:0.9em;">2m ago</span></li>
+                        <li><i class="fa fa-credit-card"></i> Payment received from Acme Inc. <span style="color:var(--muted);font-size:0.9em;">10m ago</span></li>
+                        <li><i class="fa fa-chart-line"></i> New high in active sessions <span style="color:var(--muted);font-size:0.9em;">30m ago</span></li>
+                        <li><i class="fa fa-user-edit"></i> Jane Smith updated profile <span style="color:var(--muted);font-size:0.9em;">1h ago</span></li>
+                    </ul>
+                </div>
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="actions-list">
+                        <button onclick="showToast('Invite sent!')"><i class="fa fa-user-plus"></i> Invite User</button>
+                        <button onclick="showToast('Report generated!')"><i class="fa fa-file-alt"></i> Generate Report</button>
+                        <button onclick="showToast('Settings saved!')"><i class="fa fa-cog"></i> Save Settings</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <!-- Users Table Page -->
+        <main class="page page-content" id="users-page" style="display:none;">
+            <div class="user-table-container">
+                <div class="user-table-header">
+                    <input type="search" id="user-search" placeholder="Search users...">
+                    <select id="user-filter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <table class="user-table" id="user-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th class="sortable" data-sort="name">Name <i class="fa fa-sort"></i></th>
+                            <th class="sortable" data-sort="email">Email <i class="fa fa-sort"></i></th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+                <div class="pagination" id="user-pagination"></div>
+            </div>
+        </main>
+        <!-- Settings Page -->
+        <main class="page page-content" id="settings-page" style="display:none;">
+            <div class="user-table-container">
+                <h2 style="margin-bottom:1.5rem;">Settings</h2>
+                <form id="settings-form" style="display:flex;flex-direction:column;gap:1.5rem;">
+                    <div>
+                        <label for="profile-name" style="font-weight:600;">Profile Name</label><br>
+                        <input type="text" id="profile-name" value="Alex Johnson" style="width:100%;padding:0.5rem 1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    </div>
+                    <div>
+                        <label for="api-key" style="font-weight:600;">API Key</label><br>
+                        <input type="text" id="api-key" value="sk_live_1234567890abcdef" readonly style="width:100%;padding:0.5rem 1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                        <button type="button" onclick="showToast('API Key copied!')" style="margin-top:0.5rem;">Copy</button>
+                    </div>
+                    <div>
+                        <label for="password" style="font-weight:600;">Change Password</label><br>
+                        <input type="password" id="password" placeholder="New password" style="width:100%;padding:0.5rem 1rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    </div>
+                    <button type="submit" style="align-self:flex-start;">Save Changes</button>
+                </form>
+            </div>
+        </main>
+        <!-- Analytics Page (Placeholder) -->
+        <main class="page page-content" id="analytics-page" style="display:none;">
+            <div class="user-table-container">
+                <h2>Analytics</h2>
+                <p>Advanced analytics coming soon...</p>
+            </div>
+        </main>
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+    </div>
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.onclick = () => {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            themeToggle.innerHTML = isDark ? '<i class="fa fa-moon"></i>' : '<i class="fa fa-sun"></i>';
+        };
+
+        // Profile dropdown
+        const profileMenu = document.getElementById('profile-menu');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        profileMenu.onclick = (e) => {
+            profileDropdown.classList.toggle('active');
+            e.stopPropagation();
+        };
+        document.body.onclick = () => profileDropdown.classList.remove('active');
+
+        // Sidebar navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                const page = this.getAttribute('data-page');
+                document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+                document.getElementById(page + '-page').style.display = '';
+            });
+        });
+
+        // Logout
+        document.querySelectorAll('.logout, #logout-link').forEach(el => {
+            el.onclick = () => showToast('Logged out!');
+        });
+
+        // Chart.js charts
+        const lineChart = new Chart(document.getElementById('lineChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+                datasets: [{
+                    label: 'Active Users',
+                    data: [120, 150, 180, 170, 210, 230, 187],
+                    borderColor: 'rgba(99,102,241,1)',
+                    backgroundColor: 'rgba(99,102,241,0.08)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(99,102,241,1)'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { color: '#e5e7eb' }, beginAtZero: true }
+                }
+            }
+        });
+        const barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Basic', 'Pro', 'Enterprise'],
+                datasets: [{
+                    label: 'Sales',
+                    data: [120, 80, 30],
+                    backgroundColor: [
+                        'rgba(99,102,241,0.8)',
+                        'rgba(59,130,246,0.8)',
+                        'rgba(16,185,129,0.8)'
+                    ]
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { color: '#e5e7eb' }, beginAtZero: true }
+                }
+            }
+        });
+        const pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: ['Organic', 'Referral', 'Paid'],
+                datasets: [{
+                    data: [60, 25, 15],
+                    backgroundColor: [
+                        'rgba(99,102,241,0.8)',
+                        'rgba(59,130,246,0.8)',
+                        'rgba(251,191,36,0.8)'
+                    ]
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // Toast
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // User Table Data
+        const users = [
+            {avatar:'https://randomuser.me/api/portraits/men/32.jpg', name:'Alex Johnson', email:'alex@flowmetrics.com', role:'Admin', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/women/44.jpg', name:'Jane Smith', email:'jane@flowmetrics.com', role:'Manager', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/men/65.jpg', name:'John Doe', email:'john@flowmetrics.com', role:'User', status:'inactive'},
+            {avatar:'https://randomuser.me/api/portraits/women/22.jpg', name:'Emily Clark', email:'emily@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/men/12.jpg', name:'Michael Lee', email:'michael@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/women/33.jpg', name:'Sara Wilson', email:'sara@flowmetrics.com', role:'Manager', status:'inactive'},
+            {avatar:'https://randomuser.me/api/portraits/men/77.jpg', name:'David Kim', email:'david@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/women/55.jpg', name:'Linda Brown', email:'linda@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/men/88.jpg', name:'Chris Evans', email:'chris@flowmetrics.com', role:'User', status:'inactive'},
+            {avatar:'https://randomuser.me/api/portraits/women/66.jpg', name:'Olivia Green', email:'olivia@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/men/99.jpg', name:'Brian White', email:'brian@flowmetrics.com', role:'User', status:'active'},
+            {avatar:'https://randomuser.me/api/portraits/women/77.jpg', name:'Sophia Black', email:'sophia@flowmetrics.com', role:'Manager', status:'active'},
+        ];
+        let userPage = 1, userPerPage = 6, userSort = {key:'name', asc:true}, userFilter = '', userSearch = '';
+
+        function renderUserTable() {
+            let filtered = users.filter(u =>
+                (!userFilter || u.status === userFilter) &&
+                (!userSearch || u.name.toLowerCase().includes(userSearch) || u.email.toLowerCase().includes(userSearch))
+            );
+            filtered.sort((a,b) => {
+                let v1 = a[userSort.key].toLowerCase(), v2 = b[userSort.key].toLowerCase();
+                if (v1 < v2) return userSort.asc ? -1 : 1;
+                if (v1 > v2) return userSort.asc ? 1 : -1;
+                return 0;
+            });
+            const start = (userPage-1)*userPerPage, end = start+userPerPage;
+            const pageUsers = filtered.slice(start, end);
+            const tbody = document.querySelector('#user-table tbody');
+            tbody.innerHTML = '';
+            pageUsers.forEach((u,i) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><img src="${u.avatar}" class="avatar" alt="${u.name}"></td>
+                        <td>${u.name}</td>
+                        <td>${u.email}</td>
+                        <td>${u.role}</td>
+                        <td><span class="status${u.status==='inactive'?' inactive':''}">${u.status.charAt(0).toUpperCase()+u.status.slice(1)}</span></td>
+                        <td class="actions">
+                            <button title="Edit" onclick="showToast('Edit user: ${u.name}')"><i class="fa fa-edit"></i></button>
+                            <button title="Delete" onclick="deleteUser(${users.indexOf(u)})"><i class="fa fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            // Pagination
+            const totalPages = Math.ceil(filtered.length/userPerPage);
+            const pag = document.getElementById('user-pagination');
+            pag.innerHTML = '';
+            for(let i=1;i<=totalPages;i++) {
+                pag.innerHTML += `<button class="${i===userPage?'active':''}" onclick="gotoUserPage(${i})">${i}</button>`;
+            }
+        }
+        function gotoUserPage(p) {
+            userPage = p;
+            renderUserTable();
+        }
+        function deleteUser(idx) {
+            users.splice(idx,1);
+            showToast('User deleted');
+            renderUserTable();
+        }
+        document.getElementById('user-search').oninput = function() {
+            userSearch = this.value.trim().toLowerCase();
+            userPage = 1;
+            renderUserTable();
+        };
+        document.getElementById('user-filter').onchange = function() {
+            userFilter = this.value;
+            userPage = 1;
+            renderUserTable();
+        };
+        document.querySelectorAll('.user-table th.sortable').forEach(th => {
+            th.onclick = function() {
+                const key = this.getAttribute('data-sort');
+                if(userSort.key === key) userSort.asc = !userSort.asc;
+                else { userSort.key = key; userSort.asc = true; }
+                renderUserTable();
+            };
+        });
+        window.gotoUserPage = gotoUserPage;
+        window.deleteUser = deleteUser;
+
+        // Initial render
+        renderUserTable();
+
+        // Settings form
+        document.getElementById('settings-form').onsubmit = function(e) {
+            e.preventDefault();
+            showToast('Settings saved!');
+        };
+
+        // Notification bell
+        document.getElementById('notification-bell').onclick = function() {
+            showToast('You have 3 new notifications!');
+        };
+    </script>
+</body>
+</html>
